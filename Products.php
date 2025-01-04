@@ -229,7 +229,7 @@ $categories = $pdo->query($categoriesQuery)->fetchAll(PDO::FETCH_COLUMN);
                                 <td><?php echo $product['stock']; ?></td>
                                 <td>
                                     <button class="btn btn-sm btn-info view-product" data-bs-toggle="modal" data-bs-target="#viewProductModal" data-product-id="<?php echo $product['id']; ?>">View</button>
-                                    <button class="btn btn-sm btn-primary edit-product" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product-id="<?php echo $product['id']; ?>">Edit</button>
+                                    <a href="editProduct.php?id=<?php echo $product['id']; ?>" class="btn btn-sm btn-primary">Edit</a>                                    
                                     <button class="btn btn-sm btn-danger delete-product" data-product-id="<?php echo $product['id']; ?>">Delete</button>
                                 </td>
                             </tr>
@@ -253,7 +253,7 @@ $categories = $pdo->query($categoriesQuery)->fetchAll(PDO::FETCH_COLUMN);
         </div>
     </div>
 
-    <!-- Add Product Modal -->
+   <!-- Add Product Modal -->
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -351,7 +351,7 @@ $categories = $pdo->query($categoriesQuery)->fetchAll(PDO::FETCH_COLUMN);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        $(document).ready(function() {
+            $(document).ready(function() {
             // Add new product
             $('#saveNewProduct').on('click', function() {
                 var formData = {
@@ -367,8 +367,14 @@ $categories = $pdo->query($categoriesQuery)->fetchAll(PDO::FETCH_COLUMN);
                     type: 'POST',
                     data: formData,
                     success: function(response) {
-                        alert('Product added successfully');
-                        location.reload();
+                        var jsonResponse = JSON.parse(response);
+                        if (jsonResponse.success) {
+                            alert(jsonResponse.message);
+                            // Refresh the page or append new product to the table
+                            location.reload(); // refresh to see the new product
+                        } else {
+                            alert(jsonResponse.message);
+                        }
                     },
                     error: function() {
                         alert('Error adding product');
@@ -376,7 +382,7 @@ $categories = $pdo->query($categoriesQuery)->fetchAll(PDO::FETCH_COLUMN);
                 });
             });
 
-            // View product details
+        // View product details
             $('.view-product').on('click', function() {
                 var productId = $(this).data('product-id');
                 $.ajax({
@@ -384,14 +390,25 @@ $categories = $pdo->query($categoriesQuery)->fetchAll(PDO::FETCH_COLUMN);
                     type: 'GET',
                     data: { id: productId },
                     success: function(response) {
-                        $('#viewProductDetails').html(response);
+                        var product = JSON.parse(response);
+                        if (product) {
+                            $('#viewProductDetails').html(`
+                                <strong>Name:</strong> ${product.name}<br>
+                                <strong>Category:</strong> ${product.category}<br>
+                                <strong>Price:</strong> $${parseFloat(product.price).toFixed(2)}<br>
+                                <strong>Stock:</strong> ${product.stock}<br>
+                                <strong>Description:</strong> ${product.description}
+                            `);
+                        } else {
+                            alert('Error fetching product details.');
+                        }
                     },
                     error: function() {
                         alert('Error fetching product details');
                     }
                 });
             });
-
+            
             // Load product data for editing
             $('.edit-product').on('click', function() {
                 var productId = $(this).data('product-id');
@@ -414,30 +431,32 @@ $categories = $pdo->query($categoriesQuery)->fetchAll(PDO::FETCH_COLUMN);
                 });
             });
 
-            // Save edited product
             $('#saveEditProduct').on('click', function() {
-                var formData = {
-                    id: $('#editProductId').val(),
-                    name: $('#editProductName').val(),
-                    category: $('#editProductCategory').val(),
-                    price: $('#editProductPrice').val(),
-                    stock: $('#editProductStock').val(),
-                    description: $('#editProductDescription').val()
-                };
+            var formData = {
+                id: $('input[name="id"]').val(),
+                name: $('input[name="name"]').val(),
+                category: $('input[name="category"]').val(),
+                price: $('input[name="price"]').val(),
+                stock: $('input[name="stock"]').val(),
+                description: $('textarea[name="description"]').val()
+            };
 
-                $.ajax({
-                    url: 'api/update_product.php',
-                    type: 'POST',
-                    data: formData,
-                    success: function(response) {
-                        alert('Product updated successfully');
-                        location.reload();
-                    },
-                    error: function() {
-                        alert('Error updating product');
+            $.ajax({
+                url: 'api/update_product.php',
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    var jsonResponse = JSON.parse(response);
+                    alert(jsonResponse.message);
+                    if (jsonResponse.success) {
+                        location.reload(); // Refresh halaman untuk melihat perubahan
                     }
-                });
+                },
+                error: function() {
+                    alert('Error updating product');
+                }
             });
+        });
 
             // Delete product
             $('.delete-product').on('click', function() {
@@ -448,8 +467,13 @@ $categories = $pdo->query($categoriesQuery)->fetchAll(PDO::FETCH_COLUMN);
                         type: 'POST',
                         data: { id: productId },
                         success: function(response) {
-                            alert('Product deleted successfully');
-                            location.reload();
+                            var jsonResponse = JSON.parse(response);
+                            if (jsonResponse.success) {
+                                alert(jsonResponse.message);
+                                location.reload(); // Refresh to see the updated product list
+                            } else {
+                                alert(jsonResponse.message);
+                            }
                         },
                         error: function() {
                             alert('Error deleting product');
